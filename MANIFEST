@@ -1,0 +1,11 @@
+Build.PL
+Changes
+lib/TAP/Harness/Archive.pm
+Makefile.PL
+MANIFEST
+META.yml			# Will be created by "make dist"
+README
+t/archive.t
+t/pod-coverage.t
+t/pod.t
+TODO
