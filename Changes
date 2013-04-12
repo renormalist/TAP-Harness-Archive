@@ -1,5 +1,8 @@
 Revision history for TAP-Harness-Archive
 
+0.12    21 Jul, 2008
+   + Re-fixing RT#37795. Windows.... Thanks to Tim Heckman.
+
 0.11    19 Jul, 2008
     + Fixing RT#37795. This should fix failing tests on windows. Thanks to Tim Heckman.
     + Only run t/pod.t and t/pod-coverage.t if RELEASE_TESTING is set.

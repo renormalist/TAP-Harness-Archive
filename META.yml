@@ -1,6 +1,6 @@
 ---
 name: TAP-Harness-Archive
-version: 0.11
+version: 0.12
 author:
   - 'Michael Peters <mpeters@plusthree.com>'
 abstract: Create an archive of TAP test results
@@ -21,7 +21,7 @@ requires:
 provides:
   TAP::Harness::Archive:
     file: lib/TAP/Harness/Archive.pm
-    version: 0.11
+    version: 0.12
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
