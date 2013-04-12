@@ -1,6 +1,6 @@
 ---
 name: TAP-Harness-Archive
-version: 0.01
+version: 0.03
 author:
   - 'Michael Peters <mpeters@plusthree.com>'
 abstract: Create an archive of TAP test results
@@ -8,22 +8,20 @@ license: perl
 resources:
   license: http://dev.perl.org/licenses/
 requires:
-  Archive::Builder: 1.12
+  Archive::Tar: 0
   Cwd: 0
   File::Basename: 0
   File::Find: 0
   File::Path: 0
   File::Spec: 0
   File::Temp: 0
-  TAP::Harness: 0.52
+  TAP::Harness: 3.05
   Test::More: 0
   YAML::Tiny: 0
-recommends:
-  Archive::Extract: 0.22
 provides:
   TAP::Harness::Archive:
     file: lib/TAP/Harness/Archive.pm
-    version: 0.01
+    version: 0.03
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

@@ -1,5 +1,11 @@
 Revision history for TAP-Harness-Archive
 
-0.01    Date/time
+0.03    15 Dec, 2007
+    + Removed Archive::Builder and Archive::Extract as dependencies because they
+      have soooo many other dependencies. Just using Archive::Tar instead
+    + Removed support for ZIP files (due to removing Archive::Extract). If this
+      is needed we can always use Archive::Zip.
+
+0.01    20 Aug, 2007
         First version, released on an unsuspecting world.
 

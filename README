@@ -1,20 +1,17 @@
 NAME
     TAP::Harness::Archive - Create an archive of TAP test results
 
-VERSION
-    Version 0.01
-
 SYNOPSIS
         use TAP::Harness::Archive;
         my $harness = TAP::Harness::Archive->new(\%args);
         $harness->runtests(@tests);
 
-DESCRIPTION
+DESCRIPTIO
     This module is a direct subclass of TAP::Harness and behaves in exactly
     the same way except for one detail. In addition to outputting a running
     progress of the tests and an ending summary it can also capture all of
     the raw TAP from the individual test files or streams into an archive
-    file (".tar", ".tar.gz" or ".zip").
+    file (".tar" or ".tar.gz").
 
 METHODS
     All methods are exactly the same as our base TAP::Harness except for the
@@ -26,8 +23,8 @@ METHODS
 
     archive
         This is the name of the archive file to generate. We use
-        Archive::Builder so any formats supported by Archive::Builder are
-        allowed.
+        Archive::Tar in the background so we only support ".tar" and
+        ".tar.gz" archive file formats.
 
   runtests
     Takes the same arguments as TAP::Harness's version and returns the same

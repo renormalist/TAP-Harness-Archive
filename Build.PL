@@ -9,8 +9,8 @@ my $builder = Module::Build->new(
     dist_author       => 'Michael Peters <mpeters@plusthree.com>',
     dist_version_from => 'lib/TAP/Harness/Archive.pm',
     requires          => {
-        'TAP::Harness'     => 0.52,
-        'Archive::Builder' => 1.12,
+        'TAP::Harness'     => 3.05,
+        'Archive::Tar'     => 0,
         'Test::More'       => 0,
         'Cwd'              => 0,
         'File::Basename'   => 0,
@@ -20,7 +20,6 @@ my $builder = Module::Build->new(
         'File::Find'       => 0,
         'YAML::Tiny'       => 0,
     },
-    recommends         => {'Archive::Extract' => 0.22,},
     create_makefile_pl => 'traditional',
     create_readme      => 1,
 );

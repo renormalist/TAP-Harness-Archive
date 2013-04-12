@@ -9,21 +9,17 @@ use File::Temp     ();
 use File::Spec     ();
 use File::Path     ();
 use File::Find     ();
-use Archive::Builder;
-use TAP::Parser;
-use YAML::Tiny;
+use Archive::Tar   ();
+use TAP::Parser    ();
+use YAML::Tiny     ();
 
 =head1 NAME
 
 TAP::Harness::Archive - Create an archive of TAP test results
 
-=head1 VERSION
-
-Version 0.01
-
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -31,13 +27,13 @@ our $VERSION = '0.01';
     my $harness = TAP::Harness::Archive->new(\%args);
     $harness->runtests(@tests);
 
-=head1 DESCRIPTION
+=head1 DESCRIPTIO
 
 This module is a direct subclass of L<TAP::Harness> and behaves
 in exactly the same way except for one detail. In addition to
 outputting a running progress of the tests and an ending summary
 it can also capture all of the raw TAP from the individual test
-files or streams into an archive file (C<.tar>, C<.tar.gz> or C<.zip>).
+files or streams into an archive file (C<.tar> or C<.tar.gz>).
 
 =head1 METHODS
 
@@ -53,20 +49,23 @@ we also allow the following:
 
 =item archive
 
-This is the name of the archive file to generate. We use L<Archive::Builder>
-so any formats supported by L<Archive::Builder> are allowed.
+This is the name of the archive file to generate. We use L<Archive::Tar>
+in the background so we only support C<.tar> and C<.tar.gz> archive
+file formats.
 
 =back
 
 =cut
 
-my %ARCHIVE_TYPES = (
-    'zip'    => 'zip',
-    'tar'    => 'tar',
-    'tar.gz' => 'tar.gz',
-    'tgz'    => 'tar.gz',
-);
-my @ARCHIVE_EXTENSIONS = map { ".$_" } keys %ARCHIVE_TYPES;
+my (%ARCHIVE_TYPES, @ARCHIVE_EXTENSIONS);
+BEGIN {
+    %ARCHIVE_TYPES = (
+        'tar'    => 'tar',
+        'tar.gz' => 'tar.gz',
+        'tgz'    => 'tar.gz',
+    );
+    @ARCHIVE_EXTENSIONS = map { ".$_" } keys %ARCHIVE_TYPES;
+}
 
 sub new {
     my ($class, $args) = @_;
@@ -138,15 +137,11 @@ sub runtests {
     }
 
     # now create the archive
-    my $builder = Archive::Builder->new();
-    my $section = $builder->new_section('tap_archive') or die $builder->errstr;
-    foreach my $file ($self->_get_all_files) {
-        $section->new_file($file, 'file', $file) or die $section->errstr;
-    }
-    my $archive = $section->archive($self->{__archive_format}) or die $section->errstr;
-    $archive->save($output_file) or die $archive->errstr;
+    my $archive = Archive::Tar->new();
+    $archive->add_files($self->_get_all_files);
+    $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
 
-    print "\nTAP Archive created at $output_file\n" unless $self->really_quiet;
+    print "\nTAP Archive created at $output_file\n" unless $self->verbosity < -1;
 
     # be nice and clean up
     File::Path::rmtree($dir);
@@ -223,11 +218,6 @@ The structure of the YAML file will be passed in as an argument.
 sub aggregator_from_archive {
     my ($class, $args) = @_;
 
-    eval { require Archive::Extract };
-    die
-      "Could not load Archive::Extract. It is required to use the aggregator_from_archive() method: $@"
-      if $@;
-
     my $file = $args->{archive}
       or $class->_croak("You must provide the path to the archive!");
 
@@ -237,8 +227,8 @@ sub aggregator_from_archive {
     chdir($dir) or $class->_croak("Could not change to directory $dir: $!");
     my @files;
 
-    my $archive = Archive::Extract->new(archive => $file);
-    $archive->extract();
+    my $archive = Archive::Tar->new();
+    $archive->extract_archive($file);
     my @tap_files;
 
     # do we have a .yml file in the archive?
