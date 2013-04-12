@@ -19,7 +19,7 @@ TAP::Harness::Archive - Create an archive of TAP test results
 
 =cut
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 =head1 SYNOPSIS
 
@@ -165,6 +165,16 @@ sub runtests {
     my $aggregator = $self->SUPER::runtests(@files);
 
     $meta{stop_time} = time();
+
+    my @parsers = $aggregator->parsers;
+    for ( my $i = 0; $i < @parsers; $i++ ) {
+        $parsers[ $i ] = {
+            start_time  => $parsers[ $i ]->start_time,
+            end_time    => $parsers[ $i ]->end_time,
+            description => $files[ $i ],
+        };
+    }
+    $meta{file_attributes} = \@parsers;
 
     my $cwd         = Cwd::getcwd();
     my $is_dir      = $self->{__archive_is_directory};

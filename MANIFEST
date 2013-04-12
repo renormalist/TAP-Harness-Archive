@@ -1,7 +1,6 @@
 Build.PL
 Changes
 lib/TAP/Harness/Archive.pm
-Makefile.PL
 MANIFEST
 META.yml			# Will be created by "make dist"
 README

@@ -3,7 +3,7 @@ use Test::More;
 use File::Temp ();
 use File::Spec::Functions qw(catfile catdir file_name_is_absolute);
 use TAP::Harness::Archive;
-plan(tests => 62);
+plan(tests => 65);
 
 # test creation
 eval { TAP::Harness::Archive->new() };
@@ -55,6 +55,7 @@ sub check_archive {
                 ok(exists $yaml->{start_time}, 'meta.yml: start_time exists');
                 ok(exists $yaml->{stop_time},  'meta.yml: stop_time exists');
                 ok(exists $yaml->{file_order}, 'meta.yml: file_order exists');
+                ok(exists $yaml->{file_attributes}, 'meta.yml: file_attributes exists');
             },
         }
     );

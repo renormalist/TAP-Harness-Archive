@@ -20,7 +20,6 @@ my $builder = Module::Build->new(
         'File::Find'       => 0,
         'YAML::Tiny'       => 0,
     },
-    create_makefile_pl => 'traditional',
     create_readme      => 1,
 );
 
