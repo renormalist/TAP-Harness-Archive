@@ -1,0 +1,13 @@
+MANIFEST.SKIP.bak
+MANIFEST
+README
+META.yml
+META.json
+MYMETA.json
+MYMETA.yml
+Makefile
+blib/
+pm_to_blib
+Build
+_build/
+TAP-Harness-Archive-*.*
