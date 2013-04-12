@@ -19,7 +19,7 @@ TAP::Harness::Archive - Create an archive of TAP test results
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.10';
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,7 @@ our $VERSION = '0.03';
     my $harness = TAP::Harness::Archive->new(\%args);
     $harness->runtests(@tests);
 
-=head1 DESCRIPTIO
+=head1 DESCRIPTION
 
 This module is a direct subclass of L<TAP::Harness> and behaves
 in exactly the same way except for one detail. In addition to
@@ -53,6 +53,18 @@ This is the name of the archive file to generate. We use L<Archive::Tar>
 in the background so we only support C<.tar> and C<.tar.gz> archive
 file formats.
 
+=item extra_files
+
+This is an array reference to extra files that you want to include in the TAP
+archive but which are not TAP files themselves. This is useful if you want to
+include some log files that contain useful information about the test run.
+
+=item extra_properties
+
+This is a hash reference of extra properties that you've collected during your
+test run. Some things you might want to include are the Perl version, the system's
+architecture, the operating system, etc.
+
 =back
 
 =cut
@@ -70,7 +82,12 @@ BEGIN {
 sub new {
     my ($class, $args) = @_;
     $args ||= {};
-    my $archive = delete $args->{archive};
+
+    # these can't be passed on to Test::Harness
+    my $archive     = delete $args->{archive};
+    my $extra_files = delete $args->{extra_files};
+    my $extra_props = delete $args->{extra_properties};
+
     $class->_croak("You must provide the name of the archive to create!")
       unless $archive;
 
@@ -78,10 +95,29 @@ sub new {
     $class->_croak("Archive is not a known format type!")
       unless $format && $ARCHIVE_TYPES{$format};
 
+
     my $self = $class->SUPER::new($args);
     $self->{__archive_file}    = $archive;
     $self->{__archive_format}  = $format;
     $self->{__archive_tempdir} = File::Temp::tempdir();
+
+    # handle any extra files
+    if($extra_files) {
+        ref $extra_files eq 'ARRAY' 
+            or $class->_croak("extra_files must be an array reference!");
+        foreach my $file (@$extra_files) {
+            $class->_croak("extra_file $file does not exist!") unless -e $file;
+            $class->_croak("extra_file $file is not readable!") unless -r $file;
+        }
+        $self->{__archive_extra_files} = $extra_files;
+    }
+
+    if($extra_props) {
+        ref $extra_props eq 'HASH'
+            or $class->_croak("extra_properties must be a hash reference!");
+        $self->{__archive_extra_props} = $extra_props;
+    }
+
     return $self;
 }
 
@@ -120,12 +156,6 @@ sub runtests {
 
     $meta{stop_time} = time();
 
-    # create the YAML meta file
-    my $yaml = YAML::Tiny->new();
-    $yaml->[0] = \%meta;
-    $yaml->write(File::Spec->catfile($dir, 'meta.yml'))
-      or $self->_croak("Could not write data to meta.yml: " . $yaml->errstr);
-
     # go into the dir so that we can reference files
     # relatively and put them in the archive that way
     my $cwd = Cwd::getcwd();
@@ -138,29 +168,63 @@ sub runtests {
 
     # now create the archive
     my $archive = Archive::Tar->new();
-    $archive->add_files($self->_get_all_files);
-    $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
+    $archive->add_files($self->_get_all_tap_files);
+    chdir($cwd) or $self->_croak("Could not return to directory $cwd: $!");
+ 
+    # add in any extra files
+    if(my $x_files = $self->{__archive_extra_files}) {
+        my @rel_x_files;
+        foreach my $x_file (@$x_files) {
+            # handle both relative and absolute file names
+            my $rel_file;
+            if( File::Spec->file_name_is_absolute($x_file) ) {
+                $rel_file = File::Spec->abs2rel($x_file, $cwd);
+            } else {
+                $rel_file = $x_file;
+            }
+            push(@rel_x_files, $rel_file);
+        }
+        $archive->add_files(@rel_x_files);
+        $meta{extra_files} = \@rel_x_files;
+    }
 
+    # add any extra_properties to the meta
+    if(my $extra_props = $self->{__archive_extra_props}) {
+        $meta{extra_properties} = $extra_props;
+    }
+
+    # create the YAML meta file
+    my $yaml = YAML::Tiny->new();
+    $yaml->[0] = \%meta;
+    $archive->add_data('meta.yml', $yaml->write_string);
+
+    $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
     print "\nTAP Archive created at $output_file\n" unless $self->verbosity < -1;
 
     # be nice and clean up
     File::Path::rmtree($dir);
-    chdir($cwd) or $self->_croak("Could not return to directory $cwd: $!");
 
     return $aggregator;
 }
 
-sub _get_all_files {
-    my ($self, $dir) = @_;
+sub _get_all_tap_files {
+    my ($self, $dir, $meta) = @_;
     $dir ||= $self->{__archive_tempdir};
     my @files;
+    my %x_files;
+    if($meta && $meta->{extra_files}) {
+        %x_files = map { $_ => 1 } @{$meta->{extra_files}};
+    }
+
     File::Find::find(
         {
             no_chdir => 1,
             wanted   => sub {
                 return if /^\./;
                 return if -d;
-                push(@files, File::Spec->abs2rel($_, $dir));
+                my $rel_name = File::Spec->abs2rel($_, $dir);
+                return if $rel_name eq 'meta.yml';
+                push(@files, $rel_name) unless $x_files{$rel_name};
             },
         },
         $dir
@@ -192,8 +256,8 @@ documentation for details about these callbacks.
 =item made_parser_callback
 
 This callback is executed every time a new L<TAP::Parser> object
-is created. It will be passed the new parser object and the name
-of the file to be parsed.
+is created. It will be passed the new parser object, the name
+of the file to be parsed, and also the full (temporary) path of that file.
 
 =item meta_yaml_callback
 
@@ -210,6 +274,11 @@ The structure of the YAML file will be passed in as an argument.
                 plan    => sub { warn "Nice to see you plan ahead..." },
                 unknown => sub { warn "Your TAP is bad!" },
             },
+            made_parser_callback => sub {
+                my ($parser, $file, $full_path) = @_;
+                warn "$file is temporarily located at $full_path\n";
+            }
+            
         }
     );
 
@@ -217,6 +286,7 @@ The structure of the YAML file will be passed in as an argument.
 
 sub aggregator_from_archive {
     my ($class, $args) = @_;
+    my $meta;
 
     my $file = $args->{archive}
       or $class->_croak("You must provide the path to the archive!");
@@ -231,12 +301,12 @@ sub aggregator_from_archive {
     $archive->extract_archive($file);
     my @tap_files;
 
-    # do we have a .yml file in the archive?
-    my ($yaml_file) = glob('*.yml');
-    if($yaml_file) {
+    # do we have a meta.yml file in the archive?
+    my $yaml_file = File::Spec->catfile($dir, 'meta.yml');
+    if( -e $yaml_file) {
 
         # parse it into a structure
-        my $meta = YAML::Tiny->new()->read($yaml_file);
+        $meta = YAML::Tiny->new()->read($yaml_file);
         die "Could not read YAML $yaml_file: " . YAML::Tiny->errstr if YAML::Tiny->errstr;
 
         if($args->{meta_yaml_callback}) {
@@ -253,7 +323,7 @@ sub aggregator_from_archive {
 
     # if we didn't get the files from the YAML file, just find them all
     unless(@tap_files) {
-        @tap_files = grep { $_ !~ /\.yml$/ } $class->_get_all_files($dir);
+        @tap_files = $class->_get_all_tap_files($dir, $meta);
     }
 
     # now create the aggregator
@@ -262,7 +332,7 @@ sub aggregator_from_archive {
         open(my $fh, $tap_file) or die "Could not open $tap_file for reading: $!";
         my $parser = TAP::Parser->new({source => $fh, callbacks => $args->{parser_callbacks}});
         if($args->{made_parser_callback}) {
-            $args->{made_parser_callback}->($parser, $tap_file);
+            $args->{made_parser_callback}->($parser, $tap_file, File::Spec->catfile($dir, $tap_file));
         }
         $parser->run;
         $aggregator->add($tap_file, $parser);

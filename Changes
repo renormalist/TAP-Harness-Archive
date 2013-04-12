@@ -1,5 +1,10 @@
 Revision history for TAP-Harness-Archive
 
+0.10    04 Jul, 2008
+    + Added full path as extra argument to made_parser_callback.
+    + Added extra_files argument.
+    + Added extra_properties argument.
+
 0.03    15 Dec, 2007
     + Removed Archive::Builder and Archive::Extract as dependencies because they
       have soooo many other dependencies. Just using Archive::Tar instead

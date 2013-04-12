@@ -6,7 +6,7 @@ SYNOPSIS
         my $harness = TAP::Harness::Archive->new(\%args);
         $harness->runtests(@tests);
 
-DESCRIPTIO
+DESCRIPTION
     This module is a direct subclass of TAP::Harness and behaves in exactly
     the same way except for one detail. In addition to outputting a running
     progress of the tests and an ending summary it can also capture all of
@@ -25,6 +25,17 @@ METHODS
         This is the name of the archive file to generate. We use
         Archive::Tar in the background so we only support ".tar" and
         ".tar.gz" archive file formats.
+
+    extra_files
+        This is an array reference to extra files that you want to include
+        in the TAP archive but which are not TAP files themselves. This is
+        useful if you want to include some log files that contain useful
+        information about the test run.
+
+    extra_properties
+        This is a hash reference of extra properties that you've collected
+        during your test run. Some things you might want to include are the
+        Perl version, the system's architecture, the operating system, etc.
 
   runtests
     Takes the same arguments as TAP::Harness's version and returns the same
@@ -49,8 +60,8 @@ METHODS
 
     made_parser_callback
         This callback is executed every time a new TAP::Parser object is
-        created. It will be passed the new parser object and the name of the
-        file to be parsed.
+        created. It will be passed the new parser object, the name of the
+        file to be parsed, and also the full (temporary) path of that file.
 
     meta_yaml_callback
         This is a subroutine that will be called if we find and parse a YAML
@@ -64,6 +75,11 @@ METHODS
                     plan    => sub { warn "Nice to see you plan ahead..." },
                     unknown => sub { warn "Your TAP is bad!" },
                 },
+                made_parser_callback => sub {
+                    my ($parser, $file, $full_path) = @_;
+                    warn "$file is temporarily located at $full_path\n";
+                }
+            
             }
         );
 
