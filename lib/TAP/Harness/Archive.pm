@@ -2,15 +2,16 @@ package TAP::Harness::Archive;
 use warnings;
 use strict;
 use base 'TAP::Harness';
-use Cwd            ();
-use File::Basename ();
-use File::Temp     ();
-use File::Spec     ();
-use File::Path     ();
-use File::Find     ();
-use Archive::Tar   ();
-use TAP::Parser    ();
-use YAML::Tiny     ();
+use Cwd                     ();
+use File::Basename          ();
+use File::Temp              ();
+use File::Spec              ();
+use File::Path              ();
+use File::Find              ();
+use Archive::Tar            ();
+use TAP::Parser             ();
+use YAML::Tiny              ();
+use TAP::Parser::Aggregator ();
 
 =head1 NAME
 
@@ -18,7 +19,7 @@ TAP::Harness::Archive - Create an archive of TAP test results
 
 =cut
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 =head1 SYNOPSIS
 
@@ -49,8 +50,10 @@ we also allow the following:
 =item archive
 
 This is the name of the archive file to generate. We use L<Archive::Tar>
-in the background so we only support C<.tar> and C<.tar.gz> archive
-file formats.
+in the background so we only support C<.tar> and C<.tar.gz> archive file
+formats. This can optionally be an existing directory that will have
+the TAP archive's contents deposited therein without any file archiving
+(no L<Archive::Tar> involved).
 
 =item extra_files
 
@@ -90,15 +93,23 @@ sub new {
     $class->_croak("You must provide the name of the archive to create!")
       unless $archive;
 
-    my $format = $class->_get_archive_format_from_filename($archive);
-    $class->_croak("Archive is not a known format type!")
-      unless $format && $ARCHIVE_TYPES{$format};
-
-
     my $self = $class->SUPER::new($args);
-    $self->{__archive_file}    = $archive;
-    $self->{__archive_format}  = $format;
-    $self->{__archive_tempdir} = File::Temp::tempdir();
+
+    my $is_directory = -d $archive ? 1 : 0;
+    if ($is_directory) {
+        $self->{__archive_is_directory} = $is_directory;
+        $self->{__archive_tempdir}      = $archive;
+    } else {
+        my $format = $class->_get_archive_format_from_filename($archive);
+
+        # if it's not a format we understand, or it's not a directory
+        $class->_croak("Archive is not a known format type!")
+          unless $format && $ARCHIVE_TYPES{$format};
+
+        $self->{__archive_file}    = $archive;
+        $self->{__archive_format}  = $format;
+        $self->{__archive_tempdir} = File::Temp::tempdir();
+    }
 
     # handle any extra files
     if($extra_files) {
@@ -155,20 +166,27 @@ sub runtests {
 
     $meta{stop_time} = time();
 
-    # go into the dir so that we can reference files
-    # relatively and put them in the archive that way
-    my $cwd = Cwd::getcwd();
-    chdir($dir) or $self->_croak("Could not change to directory $dir: $!");
+    my $cwd         = Cwd::getcwd();
+    my $is_dir      = $self->{__archive_is_directory};
+    my ($archive, $output_file);
+    if( $is_dir ) {
+        $output_file = $self->{__archive_tempdir};
+    } else {
+        $output_file = $self->{__archive_file};
 
-    my $output_file = $self->{__archive_file};
-    unless(File::Spec->file_name_is_absolute($output_file)) {
-        $output_file = File::Spec->catfile($cwd, $output_file);
+        # go into the dir so that we can reference files
+        # relatively and put them in the archive that way
+        chdir($dir) or $self->_croak("Could not change to directory $dir: $!");
+
+        unless (File::Spec->file_name_is_absolute($output_file)) {
+            $output_file = File::Spec->catfile($cwd, $output_file);
+        }
+
+        # create the archive
+        $archive = Archive::Tar->new();
+        $archive->add_files($self->_get_all_tap_files);
+        chdir($cwd) or $self->_croak("Could not return to directory $cwd: $!");
     }
-
-    # now create the archive
-    my $archive = Archive::Tar->new();
-    $archive->add_files($self->_get_all_tap_files);
-    chdir($cwd) or $self->_croak("Could not return to directory $cwd: $!");
  
     # add in any extra files
     if(my $x_files = $self->{__archive_extra_files}) {
@@ -183,7 +201,7 @@ sub runtests {
             }
             push(@rel_x_files, $rel_file);
         }
-        $archive->add_files(@rel_x_files);
+        $archive->add_files(@rel_x_files) unless $is_dir;
         $meta{extra_files} = \@rel_x_files;
     }
 
@@ -195,13 +213,19 @@ sub runtests {
     # create the YAML meta file
     my $yaml = YAML::Tiny->new();
     $yaml->[0] = \%meta;
-    $archive->add_data('meta.yml', $yaml->write_string);
+    if( $is_dir ) {
+        my $meta_file = File::Spec->catfile($output_file, 'meta.yml');
+        open(my $out, '>', $meta_file) or die "Could not create meta.yml: $!";
+        print $out $yaml->write_string;
+        close($out);
+    } else {
+        $archive->add_data('meta.yml', $yaml->write_string);
+        $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
+        # be nice and clean up
+        File::Path::rmtree($dir);
+    }
 
-    $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
     print "\nTAP Archive created at $output_file\n" unless $self->verbosity < -1;
-
-    # be nice and clean up
-    File::Path::rmtree($dir);
 
     return $aggregator;
 }
@@ -243,8 +267,8 @@ It takes a hash of arguments which are as follows:
 
 =item archive
 
-The path to the archive file.
-This is required.
+The path to the archive file. This can also be a directory if you created
+the archive as a directory.  This is required.
 
 =item parser_callbacks
 
@@ -290,14 +314,15 @@ sub aggregator_from_archive {
     my $file = $args->{archive}
       or $class->_croak("You must provide the path to the archive!");
 
+    my $is_directory = -d $file;
+
     # extract the files out into a temporary directory
-    my $dir = File::Temp::tempdir();
+    my $dir = $is_directory ? $file : File::Temp::tempdir();
     my $cwd = Cwd::getcwd();
     chdir($dir) or $class->_croak("Could not change to directory $dir: $!");
     my @files;
 
-    my $archive = Archive::Tar->new();
-    $archive->extract_archive($file);
+    Archive::Tar->new()->extract_archive($file) unless $is_directory;
     my @tap_files;
 
     # do we have a meta.yml file in the archive?
@@ -339,7 +364,7 @@ sub aggregator_from_archive {
 
     # be nice and clean up
     chdir($cwd) or $class->_croak("Could not return to directory $cwd: $!");
-    File::Path::rmtree($dir);
+    File::Path::rmtree($dir) unless $is_directory;
 
     return $aggregator;
 }

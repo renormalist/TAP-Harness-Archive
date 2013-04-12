@@ -3,7 +3,7 @@ use Test::More;
 use File::Temp ();
 use File::Spec::Functions qw(catfile catdir file_name_is_absolute);
 use TAP::Harness::Archive;
-plan(tests => 42);
+plan(tests => 62);
 
 # test creation
 eval { TAP::Harness::Archive->new() };
@@ -28,6 +28,13 @@ $harness = TAP::Harness::Archive->new({archive => $file, verbosity => -2});
 $harness->runtests(@testfiles);
 ok(-e $file, 'archive.tar.gz created');
 check_archive($file);
+
+# now a simple directory
+my $dir = File::Temp->tempdir('tap-archive-XXXXXXXX', CLEANUP => 1);
+$harness = TAP::Harness::Archive->new({archive => $dir, verbosity => -2});
+$harness->runtests(@testfiles);
+ok(!-e catfile($dir, 'archive.tar.gz'), "no archive.tar.gz created");
+check_archive($dir);
 
 sub check_archive {
     my $archive_file = shift;

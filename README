@@ -24,7 +24,9 @@ METHODS
     archive
         This is the name of the archive file to generate. We use
         Archive::Tar in the background so we only support ".tar" and
-        ".tar.gz" archive file formats.
+        ".tar.gz" archive file formats. This can optionally be an existing
+        directory that will have the TAP archive's contents deposited
+        therein without any file archiving (no Archive::Tar involved).
 
     extra_files
         This is an array reference to extra files that you want to include
@@ -51,7 +53,8 @@ METHODS
     It takes a hash of arguments which are as follows:
 
     archive
-        The path to the archive file. This is required.
+        The path to the archive file. This can also be a directory if you
+        created the archive as a directory. This is required.
 
     parser_callbacks
         This is a hash ref containing callbacks for the TAP::Parser objects
