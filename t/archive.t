@@ -1,7 +1,7 @@
 #!perl
 use Test::More;
 use File::Temp ();
-use File::Spec::Functions qw(catfile catdir file_name_is_absolute);
+use File::Spec::Functions qw(catfile catdir file_name_is_absolute rel2abs);
 use TAP::Harness::Archive;
 plan(tests => 42);
 
@@ -13,7 +13,7 @@ like($@, qr/Archive is not a known format type!/);
 
 # a temp directory to put everything in
 my $temp_dir = File::Temp->tempdir('tap-archive-XXXXXXXX', CLEANUP => 1);
-my @testfiles = (catfile('t', 'foo.t'), catfile('t', 'bar.t'));
+my @testfiles = map { rel2abs(catfile('t', $_)) } qw(foo.t bar.t);
 
 # first a .tar file
 $file = catfile($temp_dir, 'archive.tar');

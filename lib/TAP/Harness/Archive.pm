@@ -1,5 +1,4 @@
 package TAP::Harness::Archive;
-
 use warnings;
 use strict;
 use base 'TAP::Harness';
@@ -19,7 +18,7 @@ TAP::Harness::Archive - Create an archive of TAP test results
 
 =cut
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 =head1 SYNOPSIS
 
@@ -339,8 +338,8 @@ sub aggregator_from_archive {
     }
 
     # be nice and clean up
-    File::Path::rmtree($dir);
     chdir($cwd) or $class->_croak("Could not return to directory $cwd: $!");
+    File::Path::rmtree($dir);
 
     return $aggregator;
 }
