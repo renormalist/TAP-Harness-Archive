@@ -12,7 +12,7 @@ eval { TAP::Harness::Archive->new({archive => 'foo.bar'}) };
 like($@, qr/Archive is not a known format type!/);
 
 # a temp directory to put everything in
-my $temp_dir = File::Temp->tempdir('tap-archive-XXXXXXXX', CLEANUP => 1);
+my $temp_dir = File::Temp->newdir('tap-archive-XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
 my @testfiles = map { catfile('t', $_) } qw(foo.t bar.t);
 
 # first a .tar file
@@ -30,7 +30,7 @@ ok(-e $file, 'archive.tar.gz created');
 check_archive($file);
 
 # now a simple directory
-my $dir = File::Temp->tempdir('tap-archive-XXXXXXXX', CLEANUP => 1);
+my $dir = File::Temp->newdir('tap-archive-XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
 $harness = TAP::Harness::Archive->new({archive => $dir, verbosity => -2});
 $harness->runtests(@testfiles);
 ok(!-e catfile($dir, 'archive.tar.gz'), "no archive.tar.gz created");

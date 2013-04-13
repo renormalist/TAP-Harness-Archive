@@ -6,7 +6,7 @@ use TAP::Harness::Archive;
 plan(tests => 5);
 
 # a temp directory to put everything in
-my $temp_dir = File::Temp->tempdir('tap-archive-XXXXXXXX', CLEANUP => 1);
+my $temp_dir = File::Temp->newdir('tap-archive-XXXXXXXX', CLEANUP => 1, TMPDIR => 1);
 my @testfiles = (catfile('t', 'foo.t'), catfile('t', 'bar.t'));
 my %extra_props = (
     name => {
