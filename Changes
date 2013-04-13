@@ -1,5 +1,9 @@
 Revision history for TAP-Harness-Archive
 
+0.15    13 Apr, 2013
+    + Fix tests to correctly use File::Temp which no longer allows wrong
+      use of tempdir() as class method. [Steffen Schwigon]
+
 0.14    27 Jul, 2009
     + Added file_attributes hash to the META.yml file of the archive [Justin DeVuyst]
     + Added traditional Makefile.PL generation [M. Peters]
