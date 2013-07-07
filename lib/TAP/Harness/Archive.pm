@@ -321,7 +321,7 @@ sub aggregator_from_archive {
     my ($class, $args) = @_;
     my $meta;
 
-    my $file = $args->{archive}
+    my $file = Cwd::abs_path( $args->{archive} )
       or $class->_croak("You must provide the path to the archive!");
 
     my $is_directory = -d $file;
