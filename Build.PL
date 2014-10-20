@@ -19,6 +19,7 @@ my $builder = Module::Build->new(
         'File::Path'       => 0,
         'File::Find'       => 0,
         'YAML::Tiny'       => 0,
+        'base'             => 2.18,
     },
     create_readme      => 1,
 );
