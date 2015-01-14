@@ -7,6 +7,7 @@ WriteMakefile
           'EXE_FILES' => [],
           'VERSION_FROM' => 'lib/TAP/Harness/Archive.pm',
           'PREREQ_PM' => {
+                           'base' => '2.18',
                            'YAML::Tiny' => 0,
                            'File::Spec' => 0,
                            'TAP::Harness' => '3.05',
