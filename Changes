@@ -1,5 +1,9 @@
 Revision history for TAP-Harness-Archive
 
+0.16    14 Jan, 2015
+    + allow relative paths to archive [Renée Bäcker]
+    + Bump base.pm requirement [Tatsuhiko Miyagawa]
+
 0.15    13 Apr, 2013
     + Fix tests to correctly use File::Temp which no longer allows wrong
       use of tempdir() as class method. [Steffen Schwigon]
