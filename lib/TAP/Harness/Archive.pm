@@ -19,7 +19,7 @@ TAP::Harness::Archive - Create an archive of TAP test results
 
 =cut
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 =head1 SYNOPSIS
 
