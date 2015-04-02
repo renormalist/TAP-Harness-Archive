@@ -1,5 +1,8 @@
 Revision history for TAP-Harness-Archive
 
+0.17    02 Apr, 2015
+    + fix YAML::Tiny warning in version >= 0.57 (rt#95465) [Michal Špaček]
+
 0.16    14 Jan, 2015
     + allow relative paths to archive [Renée Bäcker]
     + Bump base.pm requirement [Tatsuhiko Miyagawa]
