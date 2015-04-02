@@ -340,8 +340,17 @@ sub aggregator_from_archive {
     if( -e $yaml_file) {
 
         # parse it into a structure
-        $meta = YAML::Tiny->new()->read($yaml_file);
-        die "Could not read YAML $yaml_file: " . YAML::Tiny->errstr if YAML::Tiny->errstr;
+        if ($YAML::Tiny::VERSION < 1.57) {
+            $meta = YAML::Tiny->new()->read($yaml_file);
+            die "Could not read YAML $yaml_file: " . YAML::Tiny->errstr if YAML::Tiny->errstr;
+        } else {
+            $meta = eval {
+                YAML::Tiny->new()->read($yaml_file);
+            };
+            if ($@) {
+                die "Could not read YAML $yaml_file: ".$@;
+            }
+        }
 
         if($args->{meta_yaml_callback}) {
             $args->{meta_yaml_callback}->($meta);
