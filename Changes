@@ -1,5 +1,8 @@
 Revision history for TAP-Harness-Archive
 
+0.18    27 Nov, 2015
+    + fix getting error message from Archive::Tar (rt#109774)
+
 0.17    02 Apr, 2015
     + fix YAML::Tiny warning in version >= 0.57 (rt#95465) [Michal Špaček]
 
