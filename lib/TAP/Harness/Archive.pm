@@ -230,7 +230,7 @@ sub runtests {
         close($out);
     } else {
         $archive->add_data('meta.yml', $yaml->write_string);
-        $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->errstr;
+        $archive->write($output_file, $self->{__archive_format} eq 'tar.gz') or die $archive->error;
         # be nice and clean up
         File::Path::rmtree($dir);
     }
